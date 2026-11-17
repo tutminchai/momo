@@ -1,6 +1,6 @@
 import { CompanionScene } from './scene.js';
-import { CompanionInteraction } from './interaction.js';
-import { LocalCompanionAI } from './local-ai.js';
+import { CompanionInteraction } from './interaction.js?v=20261117-ai3';
+import { LocalCompanionAI } from './local-ai.js?v=20261117-ai3';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];

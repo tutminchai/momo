@@ -23,7 +23,7 @@ export class LocalCompanionAI extends EventTarget {
   _ensureWorker() {
     if (this._worker) return;
     if (!('Worker' in window) || typeof WebAssembly === 'undefined') throw new Error('這個瀏覽器無法執行本機 AI，請改用最新版 Chrome 或 Edge。');
-    this._worker = new Worker(new URL('./local-ai-worker.js', import.meta.url), { type: 'module' });
+    this._worker = new Worker(new URL('./local-ai-worker.js?v=20261117-ai3', import.meta.url), { type: 'module' });
     this._worker.addEventListener('message', event => {
       const data = event.data || {};
       const request = this._requests.get(data.id);
