@@ -8,7 +8,7 @@ export class LocalCompanionAI extends EventTarget {
     this.loading = false;
     this.backend = null;
     this.dtype = null;
-    this.model = 'onnx-community/Qwen3-0.6B-ONNX-OPT';
+    this.model = 'onnx-community/Qwen3-0.6B-ONNX';
     this._worker = null;
     this._requests = new Map();
     this._serial = 0;

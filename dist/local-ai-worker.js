@@ -1,14 +1,14 @@
 // Genuine, on-device language generation. No conversation is sent to a server.
-const LIBRARY = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2/dist/transformers.web.min.js';
+const LIBRARY = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2/+esm';
 const CONVERTER = 'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/esm/cn2t.js';
-const MODEL = 'onnx-community/Qwen3-0.6B-ONNX-OPT';
-const REVISION = '4799e655597b49210adb5c1ebe5b9d3bd04005a0';
+const MODEL = 'onnx-community/Qwen3-0.6B-ONNX';
+const REVISION = '79346d370dfae34801d26993fda9ae2372900fd0';
 let library;
 let toTraditional = text => text;
 let generator;
 let loading;
 let backend = 'wasm';
-let dtype = 'q4';
+let dtype = 'q8';
 let current;
 let queue = Promise.resolve();
 const cancelled = new Set();
@@ -41,10 +41,10 @@ async function initialize(id) {
     let adapter;
     try { adapter = await self.navigator?.gpu?.requestAdapter({ powerPreference: 'high-performance' }); } catch { /* Use WASM. */ }
     if (adapter?.features.has('shader-f16')) { backend = 'webgpu'; dtype = 'q4f16'; }
-    else { backend = 'wasm'; dtype = 'q4'; }
+    else { backend = 'wasm'; dtype = 'q8'; }
     const files = new Map();
     const download = async () => {
-      const expectedBytes = dtype === 'q4f16' ? 370_000_000 : 420_000_000;
+      const expectedBytes = dtype === 'q4f16' ? 585_000_000 : 635_000_000;
       return library.pipeline('text-generation', MODEL, {
         revision: REVISION,
         dtype,
@@ -55,7 +55,7 @@ async function initialize(id) {
           const progress = Math.min(0.95, 0.02 + loaded / expectedBytes * 0.92);
           const message = info.status === 'ready' ? '正在準備對話…'
             : /\.onnx/.test(info.file || '') && info.status === 'done' ? '模型已下載，正在準備推論引擎…'
-            : loaded > 0 ? `正在下載 AI 模型：${Math.round(loaded / 1_000_000)} MB（首次約 400 MB）`
+            : loaded > 0 ? `正在下載 AI 模型：${Math.round(loaded / 1_000_000)} MB（首次約 650 MB）`
             : `正在準備${backend === 'webgpu' ? 'GPU' : '相容 CPU'}模型…`;
           post('progress', id, { progress, message, file: info.file, loaded, backend, dtype });
         }
@@ -64,8 +64,8 @@ async function initialize(id) {
     try { generator = await download(); }
     catch (error) {
       if (backend !== 'webgpu' || /fetch|network|download|HTTP/i.test(String(error?.message))) throw error;
-      post('progress', id, { progress: 0.02, message: 'GPU 模型無法啟動，改用相容 CPU 模型；可能需要再下載約 400 MB。' });
-      backend = 'wasm'; dtype = 'q4'; files.clear();
+      post('progress', id, { progress: 0.02, message: 'GPU 模型無法啟動，改用相容 CPU 模型；可能需要再下載約 650 MB。' });
+      backend = 'wasm'; dtype = 'q8'; files.clear();
       generator = await download();
     }
     return { model: MODEL, backend, dtype };
@@ -132,7 +132,7 @@ async function generate(data) {
 self.addEventListener('message', event => {
   const data = event.data || {};
   if (data.type === 'initialize') {
-    initialize(data.id).then(info => post('ready', data.id, info)).catch(error => post('error', data.id, { message: readableError(error) }));
+    initialize(data.id).then(info => post('ready', data.id, info)).catch(error => { console.error('MOMO AI initialization failed', String(error?.stack || error)); post('error', data.id, { message: readableError(error) }); });
   } else if (data.type === 'generate') {
     queue = queue.then(() => generate(data)).catch(error => post('error', data.id, { message: readableError(error) }));
   } else if (data.type === 'cancel') {
